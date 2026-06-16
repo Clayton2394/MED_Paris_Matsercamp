@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "cytoscape": "^3.34.0",
-    "maplibre-gl": "^5.24.0",
-    "pinia": "^3.0.4",
-    "vue-router": "^5.1.0"
-  }
-}
