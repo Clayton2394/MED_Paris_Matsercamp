@@ -1,0 +1,104 @@
+import os
+
+# Nettoyage du fichier agency.txt
+with open("Data/agency.txt", "r", encoding="utf-8") as agency_file :
+    agency_lines = agency_file.readlines()
+
+agency_keys = []
+agency_names = []
+
+for i in range(1, len(agency_lines)):
+    agency_lines[i] = agency_lines[i].split(",")
+    agency_keys.append(agency_lines[i][0])
+    agency_names.append(agency_lines[i][1])
+
+
+if not os.path.exists("Data_clean/agency_clean.txt"):
+    with open("Data_clean/agency_clean.txt", "w", encoding="utf-8") as agency_file_clean:
+        for i in range(len(agency_keys)):
+            agency_file_clean.write(agency_keys[i] + "," + agency_names[i] + "\n")
+
+agency = {x:y for (x,y) in zip(agency_keys, agency_names)}
+
+
+# Nettoyage du fichier stops.txt
+with open("Data/stops.txt", "r", encoding="utf-8") as stops_file:
+    stops_lines = stops_file.readlines()
+
+stops_keys = []
+stops_names = []
+stops_lon = []
+stops_lat = []
+
+for i in range(1, len(stops_lines)):
+    stops_lines[i] = stops_lines[i].split(",")
+    stops_keys.append(stops_lines[i][0])
+    stops_names.append(stops_lines[i][2])
+    stops_lon.append(stops_lines[i][4])
+    stops_lat.append(stops_lines[i][5])
+
+
+if not os.path.exists("Data_clean/stops_clean.txt"):
+    with open("Data_clean/stops_clean.txt", "w", encoding="utf-8") as stops_file_clean:
+        for i in range(len(stops_keys)):
+            stops_file_clean.write(stops_keys[i] + "," 
+                                   + stops_names[i] + "," 
+                                   + stops_lon[i] + "," 
+                                   + stops_lat[i] 
+                                   + "\n")
+
+
+# Nettoyage du fichier routes.txt
+with open("Data/routes.txt", "r", encoding="utf-8") as routes_file:
+    routes_lines = routes_file.readlines()
+
+routes_keys = []
+routes_agency_id = []
+routes_names = []
+routes_type = []
+routes_color = []
+
+for i in range(1, len(routes_lines)):
+    routes_lines[i] = routes_lines[i].split(",")
+    routes_keys.append(routes_lines[i][0])
+    routes_agency_id.append(routes_lines[i][1])
+    routes_names.append(routes_lines[i][2])
+    routes_type.append(routes_lines[i][5])
+    routes_color.append(routes_lines[i][7])
+
+if not os.path.exists("Data_clean/routes_clean.txt"):
+    with open("Data_clean/routes_clean.txt", "w", encoding="utf-8") as routes_file_clean:
+        for i in range(len(routes_keys)):
+            routes_file_clean.write(routes_keys[i] + "," 
+                                    + routes_agency_id[i] + "," 
+                                    + routes_names[i] + "," 
+                                    + routes_type[i] + "," 
+                                    + routes_color[i] 
+                                    + "\n")
+
+
+# Nettoyage du fichier trips.txt
+with open("Data/trips.txt", "r", encoding="utf-8") as trips_file:
+    trips_lines = trips_file.readlines()
+
+trips_route_id = []
+trips_service_id = []
+trips_keys = []
+trips_direction = []
+
+for i in range(1, len(trips_lines)):
+    trips_lines[i] = trips_lines[i].split(",")
+    trips_route_id.append(trips_lines[i][0])
+    trips_service_id.append(trips_lines[i][1])
+    trips_keys.append(trips_lines[i][2])
+    trips_direction.append(trips_lines[i][5])
+
+if not os.path.exists("Data_clean/trips_clean.txt"):
+    with open("Data_clean/trips_clean.txt", "w", encoding="utf-8") as trips_file_clean:
+        for i in range(len(trips_keys)):
+            trips_file_clean.write(trips_route_id[i] + "," 
+                                   + trips_service_id[i] + "," 
+                                   + trips_keys[i] + "," 
+                                   + trips_direction[i] 
+                                   + "\n")
+
