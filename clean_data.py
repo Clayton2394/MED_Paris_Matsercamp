@@ -1,25 +1,5 @@
 import os
 
-# Nettoyage du fichier agency.txt
-with open("Data/agency.txt", "r", encoding="utf-8") as agency_file :
-    agency_lines = agency_file.readlines()
-
-agency_keys = []
-agency_names = []
-
-for i in range(1, len(agency_lines)):
-    agency_lines[i] = agency_lines[i].split(",")
-    if agency_lines[i][1] == "RATP" or agency_lines[i][1] == "RER":
-        agency_keys.append(agency_lines[i][0])
-        agency_names.append(agency_lines[i][1])
-
-
-if not os.path.exists("Data_clean/agency_clean.txt"):
-    with open("Data_clean/agency_clean.txt", "w", encoding="utf-8") as agency_file_clean:
-        for i in range(len(agency_keys)):
-            agency_file_clean.write(agency_keys[i] + "," + agency_names[i] + "\n")
-
-
 # Nettoyage du fichier routes.txt
 with open("Data/routes.txt", "r", encoding="utf-8") as routes_file:
     routes_lines = routes_file.readlines()
@@ -32,7 +12,7 @@ routes_color = []
 
 for i in range(1, len(routes_lines)):
     routes_lines[i] = routes_lines[i].split(",")
-    if routes_lines[i][1] in agency_keys:
+    if routes_lines[i][5] == "1" and routes_lines[i][1] == "IDFM:Operator_100":
         routes_keys.append(routes_lines[i][0])
         routes_agency_id.append(routes_lines[i][1])
         routes_names.append(routes_lines[i][2])
@@ -105,8 +85,6 @@ if not os.path.exists("Data_clean/stop_times_clean.txt"):
                 
     print("Nettoyage de stop_times.txt terminé !")
 
-print(stops_to_keep)
-
 # Nettoyage du fichier stops.txt
 with open("Data/stops.txt", "r", encoding="utf-8") as stops_file:
     stops_lines = stops_file.readlines()
@@ -134,3 +112,7 @@ if not os.path.exists("Data_clean/stops_clean.txt"):
                                    + stops_lat[i] 
                                    + "\n")
 
+with open("Data_clean/stops_clean.txt", "r", encoding="utf-8") as stops_file:
+    stops_lines = stops_file.readlines()
+
+print(len(stops_lines))
