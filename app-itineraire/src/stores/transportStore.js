@@ -30,35 +30,38 @@ export const useTransportStore = defineStore('transport', {
     // -------------------------------------------------------------
     // ACTION 1 : Déclenchée par le bouton "Rechercher"
     // -------------------------------------------------------------
-    rechercher() {
-      // On réinitialise les erreurs et les résultats précédents
+    async rechercher() {
       this.erreurMessage = '';
       this.resultatItineraire = null;
 
-      // Validation basique : vérifier que les champs ne sont pas vides
-      if (!this.stationDepart.trim() || !this.stationArrivee.trim()) {
-        this.erreurMessage = "Veuillez renseigner la station de départ et d'arrivée.";
-        return; // Stoppe l'exécution
-      }
+    if (!this.stationDepart.trim() || !this.stationArrivee.trim()) {
+      this.erreurMessage = "Veuillez renseigner la station de départ et d'arrivée.";
+    return;
+    }
 
-      this.isLoading = true;
-      
-      // Logs console pour le débug (vérifier que les options V3 sont bien prises en compte)
-      console.log(`Recherche demandée : ${this.stationDepart} -> ${this.stationArrivee}`);
-      console.log(`Mode : ${this.typeRecherche} le ${this.dateTrajet} à ${this.heureTrajet}`);
-      console.log(`PMR activé : ${this.pmr}`);
+    this.isLoading = true;
 
-      // MOCKING : On simule l'attente du calcul de Dijkstra (Backend Java)
-      // À remplacer plus tard par : const response = await fetch('http://localhost:8080/api/itineraire...')
-      setTimeout(() => {
-        this.resultatItineraire = {
-          chemin: [this.stationDepart, "Station Centrale (Fictive)", this.stationArrivee],
-          distance: 2
-        };
-        this.isLoading = false;
-        console.log("Résultat de l'itinéraire chargé !");
-      }, 1500);
-    },
+    try {
+      const params = new URLSearchParams({
+      depart: this.stationDepart.trim(),
+      arrivee: this.stationArrivee.trim()
+    });
+
+    const response = await fetch(`http://localhost:8081/api/itineraire?${params}`);
+
+    if (!response.ok) {
+      this.erreurMessage = await response.text();
+      return;
+    }
+
+    this.resultatItineraire = await response.json();
+  
+  } catch (e) {
+    this.erreurMessage = "Impossible de contacter le serveur. Le backend Java est-il lancé ?";
+  } finally {
+    this.isLoading = false;
+  }
+},
 
     // -------------------------------------------------------------
     // ACTION 2 : Déclenchée par la page "Voir l'ACPM"
