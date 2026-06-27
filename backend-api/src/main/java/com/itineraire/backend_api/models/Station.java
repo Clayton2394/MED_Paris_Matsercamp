@@ -3,10 +3,10 @@ package com.itineraire.backend_api.models;
 import java.util.Objects;
 
 public class Station {
-    private String id;
-    private String nom;
-    private double lon;
-    private double lat;
+    private final String id;
+    private final String nom;
+    private final double lon;
+    private final double lat;
 
     public Station(String id, String nom, double lon, double lat) {
         this.id = id;
