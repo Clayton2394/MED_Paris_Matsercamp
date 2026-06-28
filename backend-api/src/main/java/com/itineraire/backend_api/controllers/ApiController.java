@@ -18,6 +18,8 @@ import com.itineraire.backend_api.models.ItineraireResultat;
 import com.itineraire.backend_api.models.Station;
 import com.itineraire.backend_api.services.NetworkGraphService;
 import com.itineraire.backend_api.services.RoutageService;
+import com.itineraire.backend_api.services.AcpmService;
+
 
 @RestController
 @RequestMapping("/api")
@@ -26,37 +28,42 @@ public class ApiController {
 
     private final NetworkGraphService graphService;
     private final RoutageService routageService;
+    private final AcpmService acpmService;
 
-    public ApiController(NetworkGraphService graphService, RoutageService routageService) {
+    public ApiController(NetworkGraphService graphService, RoutageService routageService, AcpmService acpmService) {
         this.graphService = graphService;
         this.routageService = routageService;
+        this.acpmService = acpmService;
     }
 
     @GetMapping("/stations")
-    public List<StationDTO> getToutesLesStations() {
-        Set<String> nomsVus = new HashSet<>();
-        List<StationDTO> listeEpurée = new ArrayList<>();
-
-        for (Station s : graphService.getNetworkGraph().vertexSet()) {
-            if (!nomsVus.contains(s.getNom())) {
-                nomsVus.add(s.getNom());
-                listeEpurée.add(new StationDTO(s.getId(), s.getNom()));
-            }
-        }
-
-        listeEpurée.sort(Comparator.comparing(StationDTO::getNom));
-        return listeEpurée;
+    public List<String> getToutesLesStations() {
+        return graphService.getToutesLesStations();
     }
 
     @GetMapping("/itineraire")
     public ResponseEntity<?> getItineraire(@RequestParam String depart, @RequestParam String arrivee) {
-        ItineraireResultat resultat = routageService.calculerItineraire(depart, arrivee);
+        try {
+            ItineraireResultat resultat = routageService.calculerItineraire(depart, arrivee);
 
-        if (resultat == null) {
-            return ResponseEntity.status(404)
-                .body("Aucun chemin trouvé entre « " + depart + " » et « " + arrivee + " ».");
+            if (resultat == null) {
+                return ResponseEntity.status(404)
+                    .body("Aucun chemin trouvé entre « " + depart + " » et « " + arrivee + " ».");
+            }
+
+            return ResponseEntity.ok(resultat);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
         }
+    }
 
-        return ResponseEntity.ok(resultat);
+    @GetMapping("/acpm")
+    public ResponseEntity<List<java.util.Map<String, Object>>> getAcpm() {
+        return ResponseEntity.ok(acpmService.calculerACPM());
+    }
+
+    @GetMapping("/connexite")
+    public ResponseEntity<java.util.Map<String, Object>> getConnexite() {
+        return ResponseEntity.ok(graphService.verifierConnexite());
     }
 }

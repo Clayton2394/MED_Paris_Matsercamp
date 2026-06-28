@@ -34,7 +34,7 @@ watch(() => store.arbreACPM, (nouvelArbre) => {
     // Initialisation de Cytoscape
     cytoscape({
       container: cyContainer.value,
-      elements: nouvelArbre, // On injecte nos fausses données
+      elements: nouvelArbre, // On injecte les données récupérées de l'API
       
       // Le style visuel (pour le Membre 5)
       style: [
@@ -68,7 +68,10 @@ watch(() => store.arbreACPM, (nouvelArbre) => {
       // L'algorithme de disposition automatique
       layout: {
         name: 'cose', // algorithme de physique pour écarter les nœuds
-        padding: 50
+        padding: 50,
+        nodeRepulsion: function( node ){ return 400000; }, // Augmenté pour bien écarter les nœuds
+        idealEdgeLength: function( edge ){ return 100; },
+        edgeElasticity: function( edge ){ return 100; }
       }
     });
   }

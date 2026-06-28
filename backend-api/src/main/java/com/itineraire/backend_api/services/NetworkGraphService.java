@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.SimpleWeightedGraph;
 import org.springframework.stereotype.Service;
 
@@ -185,5 +186,36 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
 
     public Graph<Station, Liaison> getNetworkGraph() {
         return networkGraph;
+    }
+
+    public Map<String, Object> verifierConnexite() {
+        ConnectivityInspector<Station, Liaison> inspector = new ConnectivityInspector<>(networkGraph);
+        boolean isConnected = inspector.isConnected();
+
+        Map<String, Object> resultat = new HashMap<>();
+        resultat.put("estConnexe", isConnected);
+        
+        if (isConnected) {
+            resultat.put("message", "Le réseau est entièrement connecté.");
+        } else {
+            resultat.put("message", "Attention, certaines stations sont isolées du reste du réseau.");
+        }
+
+        return resultat;
+    }
+
+    public List<String> getToutesLesStations() {
+        java.util.Set<String> nomsVus = new java.util.HashSet<>();
+        List<String> listeEpurée = new java.util.ArrayList<>();
+
+        for (Station s : networkGraph.vertexSet()) {
+            if (!nomsVus.contains(s.getNom())) {
+                nomsVus.add(s.getNom());
+                listeEpurée.add(s.getNom());
+            }
+        }
+
+        listeEpurée.sort(String::compareTo);
+        return listeEpurée;
     }
 }
