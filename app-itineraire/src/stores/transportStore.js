@@ -10,6 +10,7 @@ export const useTransportStore = defineStore('transport', {
     resultatItineraire: null,
     isLoading: false,
     erreurMessage: '',
+    stationsDisponibles: [],
 
     // ==========================================
     // 2. OPTIONS AVANCÉES (V3)
@@ -42,12 +43,8 @@ export const useTransportStore = defineStore('transport', {
     this.isLoading = true;
 
     try {
-      const params = new URLSearchParams({
-      depart: this.stationDepart.trim(),
-      arrivee: this.stationArrivee.trim()
-    });
-
-    const response = await fetch(`http://localhost:8081/api/itineraire?${params}`);
+      const url = `http://localhost:8081/api/itineraire?depart=${encodeURIComponent(this.stationDepart)}&arrivee=${encodeURIComponent(this.stationArrivee)}`;
+      const response = await fetch(url);
 
     if (!response.ok) {
       this.erreurMessage = await response.text();
@@ -63,32 +60,40 @@ export const useTransportStore = defineStore('transport', {
   }
 },
 
+    async chargerStations() {
+      try {
+        const response = await fetch('http://localhost:8081/api/stations');
+        if (response.ok) {
+          const data = await response.json();
+          this.stationsDisponibles = data;
+        }
+      } catch (error) {
+        // Géré silencieusement
+      }
+    },
+
     // -------------------------------------------------------------
     // ACTION 2 : Déclenchée par la page "Voir l'ACPM"
     // -------------------------------------------------------------
-    chargerACPM() {
+    async chargerACPM() {
       this.isAcpmLoading = true;
       console.log("Demande de l'ACPM au serveur Java en cours...");
 
-      // MOCKING : On simule l'attente du calcul de Kruskal/Prim (Backend Java)
-      setTimeout(() => {
-        // Fausse structure de graphe compatible avec Cytoscape.js
-        this.arbreACPM = [
-          // Les Nœuds (Stations)
-          { data: { id: 'A', label: 'Châtelet' } },
-          { data: { id: 'B', label: 'Les Halles' } },
-          { data: { id: 'C', label: 'Gare du Nord' } },
-          { data: { id: 'D', label: 'Bastille' } },
-          
-          // Les Arêtes (Lignes et poids/temps)
-          { data: { source: 'A', target: 'B', weight: 1 } },
-          { data: { source: 'B', target: 'C', weight: 4 } },
-          { data: { source: 'A', target: 'D', weight: 2 } }
-        ];
+      try {
+        const response = await fetch('http://localhost:8081/api/acpm');
         
+        if (!response.ok) {
+          throw new Error(`Erreur réseau (statut: ${response.status})`);
+        }
+        
+        const data = await response.json();
+        this.arbreACPM = data;
+        console.log("Arbre ACPM chargé avec succès !");
+      } catch (error) {
+        console.error("Erreur lors de la récupération de l'ACPM :", error);
+      } finally {
         this.isAcpmLoading = false;
-        console.log("Arbre ACPM chargé !");
-      }, 1000);
+      }
     }
   }
 })

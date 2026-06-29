@@ -1,13 +1,16 @@
 package com.itineraire.backend_api.services;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.SimpleWeightedGraph;
 import org.springframework.stereotype.Service;
 
@@ -25,14 +28,19 @@ public class NetworkGraphService {
     // Un dictionnaire pour retrouver vite une station grâce à son ID
     private final Map<String, Station> stationIndex = new HashMap<>();
 
+    // Dictionnaire pour les routes (route_id -> {nomLigne, couleur})
+    private final Map<String, String[]> routesInfo = new HashMap<>();
+
     // Les nouveaux chemins vers les fichiers
-    private final String STOPS_FILE = "./Data_clean/stops_clean.txt";
-    private final String LIAISONS_FILE = "./Data_clean/liaisons_clean.txt";
+    private final String STOPS_FILE = "../Data_clean/stops_clean.txt";
+    private final String LIAISONS_FILE = "../Data_clean/liaisons_clean.txt";
+    private final String ROUTES_FILE = "../Data_clean/routes_clean.txt";
 
     @PostConstruct
 public void initGraph() {
     System.out.println("Début de la construction du graphe...");
 
+    loadRoutes();
     loadStations();
     loadEdges();
     createTransfers();
@@ -83,8 +91,26 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
     networkGraph.setEdgeWeight(l, secondes);
 }
 
+    private void loadRoutes() {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(ROUTES_FILE), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] cols = line.split(",");
+                if (cols.length >= 5) {
+                    String routeId = cols[0].trim();
+                    String nomLigne = cols[2].trim();
+                    String couleur = cols[4].trim();
+                    routesInfo.put(routeId, new String[]{nomLigne, couleur});
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur chargement routes_clean.txt: " + e.getMessage());
+        }
+    }
+
     private void loadStations() {
-        try (BufferedReader br = new BufferedReader(new FileReader(STOPS_FILE))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(STOPS_FILE), StandardCharsets.UTF_8))) {
             String line;
             br.readLine(); // Passer les en-têtes
             
@@ -117,7 +143,7 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
     }
 
     private void loadEdges() {
-        try (BufferedReader br = new BufferedReader(new FileReader(LIAISONS_FILE))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(LIAISONS_FILE), StandardCharsets.UTF_8))) {
             String line;
             br.readLine(); // Passer l'en-tête (stop_depart,stop_arrivee,duree_secondes,route_id)
 
@@ -126,6 +152,7 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
                 if (cols.length >= 3) {
                     String stopDepartId = cols[0].trim();
                     String stopArriveeId = cols[1].trim();
+                    String routeId = cols.length >= 4 ? cols[3].trim() : "INCONNU";
                     
                     try {
                         double dureeSecondes = Double.parseDouble(cols[2].trim());
@@ -135,7 +162,13 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
 
                         if (stationDepart != null && stationArrivee != null && !stationDepart.equals(stationArrivee)) {
                             if (!networkGraph.containsEdge(stationDepart, stationArrivee)) {
-                                Liaison liaison = new Liaison();
+                                String nomLigne = "Ligne";
+                                String couleur = "000000";
+                                if (routesInfo.containsKey(routeId)) {
+                                    nomLigne = routesInfo.get(routeId)[0];
+                                    couleur = routesInfo.get(routeId)[1];
+                                }
+                                Liaison liaison = new Liaison(routeId, nomLigne, couleur);
                                 networkGraph.addEdge(stationDepart, stationArrivee, liaison);
                                 
                                 // On applique le VRAI temps de parcours en secondes !
@@ -185,5 +218,36 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
 
     public Graph<Station, Liaison> getNetworkGraph() {
         return networkGraph;
+    }
+
+    public Map<String, Object> verifierConnexite() {
+        ConnectivityInspector<Station, Liaison> inspector = new ConnectivityInspector<>(networkGraph);
+        boolean isConnected = inspector.isConnected();
+
+        Map<String, Object> resultat = new HashMap<>();
+        resultat.put("estConnexe", isConnected);
+        
+        if (isConnected) {
+            resultat.put("message", "Le réseau est entièrement connecté.");
+        } else {
+            resultat.put("message", "Attention, certaines stations sont isolées du reste du réseau.");
+        }
+
+        return resultat;
+    }
+
+    public List<String> getToutesLesStations() {
+        java.util.Set<String> nomsVus = new java.util.HashSet<>();
+        List<String> listeEpurée = new java.util.ArrayList<>();
+
+        for (Station s : networkGraph.vertexSet()) {
+            if (!nomsVus.contains(s.getNom())) {
+                nomsVus.add(s.getNom());
+                listeEpurée.add(s.getNom());
+            }
+        }
+
+        listeEpurée.sort(String::compareTo);
+        return listeEpurée;
     }
 }
