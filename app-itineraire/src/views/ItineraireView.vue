@@ -335,10 +335,8 @@ watch(() => store.resultatItineraire, (nouveauResultat) => {
 .itineraire-layout {
   position: relative;
   width: 100%;
-  height: 80vh;
-  border-radius: 12px;
+  height: 100%;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .map-container {
@@ -352,23 +350,24 @@ watch(() => store.resultatItineraire, (nouveauResultat) => {
 
 .panneau-flottant {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  width: 340px;
+  top: 0;
+  left: 0;
+  width: 380px;
+  height: 100%;
   background-color: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  padding: 30px 25px;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.15);
   z-index: 2;
-  max-height: 90%;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 25px;
   text-align: left;
+  color: #1a73e8;
 }
 
 /* Styles du formulaire */

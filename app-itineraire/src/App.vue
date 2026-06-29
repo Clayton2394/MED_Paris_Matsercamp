@@ -1,35 +1,58 @@
 <template>
   <div class="app-container">
-    <nav>
-      <router-link to="/">Rechercher un Itinéraire</router-link> |
-      <router-link to="/acpm">Voir l'ACPM</router-link>
-    </nav>
-
     <main>
       <router-view></router-view>
     </main>
+
+    <nav class="view-switch">
+      <router-link to="/" class="switch-btn" exact-active-class="active">🗺️ Carte</router-link>
+      <router-link to="/acpm" class="switch-btn" exact-active-class="active">🌳 ACPM</router-link>
+    </nav>
   </div>
 </template>
 
 <style scoped>
-nav {
-  padding: 20px;
-  background-color: #2c3e50;
-  text-align: center;
-  margin-bottom: 30px;
-  border-radius: 8px;
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
 }
 
-nav a {
+main {
+  width: 100%;
+  height: 100%;
+}
+
+.view-switch {
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  background-color: white;
+  padding: 5px;
+  border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  display: flex;
+  gap: 5px;
+  z-index: 1000;
+}
+
+.switch-btn {
+  padding: 10px 20px;
   font-weight: bold;
-  color: white;
+  color: #333;
   text-decoration: none;
-  margin: 0 15px;
-  font-size: 1.2rem;
+  border-radius: 25px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
 }
 
-/* Vue.js ajoute automatiquement cette classe quand on est sur la page active */
-nav a.router-link-exact-active {
-  color: #42b983; /* Vert Vue.js */
+.switch-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.switch-btn.active {
+  background-color: #1a73e8;
+  color: white;
 }
 </style>

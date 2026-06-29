@@ -82,10 +82,9 @@ watch(() => store.arbreACPM, (nouvelArbre) => {
 .acpm-container {
   display: flex;
   flex-direction: column;
-  height: 80vh;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  width: 100%;
+  height: 100%;
+  background-color: #f8f9fa;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -93,6 +92,10 @@ watch(() => store.arbreACPM, (nouvelArbre) => {
 .header {
   text-align: center;
   margin-bottom: 20px;
+  background-color: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 h1 {
