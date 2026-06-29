@@ -51,11 +51,12 @@ public class RoutageServiceTest {
         miniGraphe.setEdgeWeight(bc, 60.0);
 
         when(networkGraphService.getNetworkGraph()).thenReturn(miniGraphe);
+        when(networkGraphService.isRouteActive(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
     }
 
     @Test
     public void testTrajetValide_RetourneLeBonChemin() {
-        ItineraireResultat resultat = routageService.calculerItineraire("Station A", "Station C");
+        ItineraireResultat resultat = routageService.calculerItineraire("Station A", "Station C", null);
 
         assertNotNull(resultat);
         assertEquals(3, resultat.getChemin().size());
@@ -68,7 +69,7 @@ public class RoutageServiceTest {
 
     @Test
     public void testTrajetMemeStation_RetourneUnCheminVideOuUneEtape() {
-        ItineraireResultat resultat = routageService.calculerItineraire("Station A", "Station A");
+        ItineraireResultat resultat = routageService.calculerItineraire("Station A", "Station A", null);
 
         assertNotNull(resultat);
         assertEquals(1, resultat.getChemin().size());
@@ -79,7 +80,7 @@ public class RoutageServiceTest {
     @Test
     public void testStationInconnue_LeveException() {
         assertThrows(IllegalArgumentException.class, () -> {
-            routageService.calculerItineraire("Station A", "Station Fantôme");
+            routageService.calculerItineraire("Station A", "Station Fantôme", null);
         });
     }
 }

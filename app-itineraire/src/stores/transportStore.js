@@ -43,7 +43,10 @@ export const useTransportStore = defineStore('transport', {
     this.isLoading = true;
 
     try {
-      const url = `http://localhost:8081/api/itineraire?depart=${encodeURIComponent(this.stationDepart)}&arrivee=${encodeURIComponent(this.stationArrivee)}`;
+      let url = `http://localhost:8081/api/itineraire?depart=${encodeURIComponent(this.stationDepart)}&arrivee=${encodeURIComponent(this.stationArrivee)}`;
+      if (this.dateTrajet) {
+          url += `&date=${encodeURIComponent(this.dateTrajet)}`;
+      }
       const response = await fetch(url);
 
     if (!response.ok) {

@@ -42,9 +42,12 @@ public class ApiController {
     }
 
     @GetMapping("/itineraire")
-    public ResponseEntity<?> getItineraire(@RequestParam String depart, @RequestParam String arrivee) {
+    public ResponseEntity<?> getItineraire(
+            @RequestParam String depart, 
+            @RequestParam String arrivee,
+            @RequestParam(required = false) String date) {
         try {
-            ItineraireResultat resultat = routageService.calculerItineraire(depart, arrivee);
+            ItineraireResultat resultat = routageService.calculerItineraire(depart, arrivee, date);
 
             if (resultat == null) {
                 return ResponseEntity.status(404)

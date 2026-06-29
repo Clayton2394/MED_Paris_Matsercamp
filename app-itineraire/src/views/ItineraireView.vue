@@ -247,7 +247,7 @@ const hideArriveeDropdown = () => {
 // Fonction pour remplir l'heure et la date actuelles
 const partirMaintenant = () => {
   const now = new Date();
-  store.dateTrajet = now.toISOString().split('T')[0];
+  store.dateTrajet = '2024-03-14';
   store.heureTrajet = now.toTimeString().substring(0, 5);
 };
 

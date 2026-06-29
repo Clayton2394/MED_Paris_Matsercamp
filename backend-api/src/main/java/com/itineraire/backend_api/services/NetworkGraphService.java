@@ -31,19 +31,36 @@ public class NetworkGraphService {
     // Dictionnaire pour les routes (route_id -> {nomLigne, couleur})
     private final Map<String, String[]> routesInfo = new HashMap<>();
 
+    // --- NOUVELLES DONNEES TEMPORELLES ---
+    private final Map<String, java.util.List<String>> routeToServices = new HashMap<>();
+    
+    public static class ServiceCalendar {
+        boolean[] days;
+        int startDate;
+        int endDate;
+    }
+    private final Map<String, ServiceCalendar> services = new HashMap<>();
+    private final Map<String, Map<Integer, Integer>> calendarDates = new HashMap<>();
+
     // Les nouveaux chemins vers les fichiers
     private final String STOPS_FILE = "../Data_clean/stops_clean.txt";
     private final String LIAISONS_FILE = "../Data_clean/liaisons_clean.txt";
     private final String ROUTES_FILE = "../Data_clean/routes_clean.txt";
+    private final String CALENDAR_FILE = "../Data_clean/calendar_clean.txt";
+    private final String CALENDAR_DATES_FILE = "../Data_clean/calendar_dates_clean.txt";
+    private final String TRIPS_FILE = "../Data_clean/trips_clean.txt";
 
     @PostConstruct
-public void initGraph() {
-    System.out.println("Début de la construction du graphe...");
+    public void initGraph() {
+        System.out.println("Début de la construction du graphe...");
 
-    loadRoutes();
-    loadStations();
-    loadEdges();
-    createTransfers();
+        loadRoutes();
+        loadCalendar();
+        loadCalendarDates();
+        loadTrips();
+        loadStations();
+        loadEdges();
+        createTransfers();
 
     // Si les fichiers CSV sont absents, on injecte un mini-graphe de test
     if (networkGraph.vertexSet().isEmpty()) {
@@ -107,6 +124,57 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
         } catch (Exception e) {
             System.err.println("Erreur chargement routes_clean.txt: " + e.getMessage());
         }
+    }
+
+    private void loadCalendar() {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(CALENDAR_FILE), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] cols = line.split(",");
+                if (cols.length >= 10) {
+                    ServiceCalendar sc = new ServiceCalendar();
+                    sc.days = new boolean[7];
+                    for (int i=0; i<7; i++) {
+                        sc.days[i] = cols[i+1].trim().equals("1");
+                    }
+                    sc.startDate = Integer.parseInt(cols[8].trim());
+                    sc.endDate = Integer.parseInt(cols[9].trim());
+                    services.put(cols[0].trim(), sc);
+                }
+            }
+        } catch (Exception e) { System.err.println("Erreur loadCalendar: " + e.getMessage()); }
+    }
+
+    private void loadCalendarDates() {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(CALENDAR_DATES_FILE), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] cols = line.split(",");
+                if (cols.length >= 3) {
+                    String serviceId = cols[0].trim();
+                    int date = Integer.parseInt(cols[1].trim());
+                    int exceptionType = Integer.parseInt(cols[2].trim());
+                    calendarDates.computeIfAbsent(serviceId, k -> new HashMap<>()).put(date, exceptionType);
+                }
+            }
+        } catch (Exception e) { System.err.println("Erreur loadCalendarDates: " + e.getMessage()); }
+    }
+
+    private void loadTrips() {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(TRIPS_FILE), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] cols = line.split(",");
+                if (cols.length >= 2) {
+                    String routeId = cols[0].trim();
+                    String serviceId = cols[1].trim();
+                    routeToServices.computeIfAbsent(routeId, k -> new java.util.ArrayList<>()).add(serviceId);
+                }
+            }
+        } catch (Exception e) { System.err.println("Erreur loadTrips: " + e.getMessage()); }
     }
 
     private void loadStations() {
@@ -205,8 +273,18 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
                             Liaison correspondance = new Liaison();
                             networkGraph.addEdge(quaiA, quaiB, correspondance);
                             
-                            // Un changement de ligne prend environ 4 minutes (240 secondes)
-                            networkGraph.setEdgeWeight(correspondance, 240.0); 
+                            // Distance physique réelle entre les quais en mètres
+                            double distanceMeters = calculateHaversineDistance(quaiA.getLat(), quaiA.getLon(), quaiB.getLat(), quaiB.getLon());
+                            
+                            // Logique réaliste: vitesse de marche d'environ 1.2 m/s
+                            // + Un temps forfaitaire (ex: 2 min = 120s) pour traverser les portiques, descendre/monter les escaliers
+                            double tempsMarche = distanceMeters / 1.2;
+                            double tempsTotal = tempsMarche + 120.0;
+                            
+                            // Plafond de sécurité (maximum 15 minutes) au cas où deux gares ont le même nom mais sont très éloignées géographiquement
+                            if (tempsTotal > 900.0) tempsTotal = 900.0;
+                            
+                            networkGraph.setEdgeWeight(correspondance, tempsTotal); 
                             correspondancesCrees++;
                         }
                     }
@@ -216,8 +294,62 @@ private void ajouterLiaison(Station a, Station b, double secondes) {
         System.out.println(correspondancesCrees + " liaisons de correspondances ont été ajoutées !");
     }
 
+    private double calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // Rayon de la Terre en km
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c * 1000; // Retour en mètres
+    }
+
     public Graph<Station, Liaison> getNetworkGraph() {
         return networkGraph;
+    }
+
+    public boolean isRouteActive(String routeId, String dateStr) {
+        if (dateStr == null || dateStr.trim().isEmpty()) return true; // Si aucune date spécifiée, on garde tout
+        if ("INCONNU".equals(routeId) || routeId == null) return true; // Les correspondances à pied sont toujours ouvertes
+        
+        int dateInt;
+        int dayOfWeek;
+        try {
+            dateInt = Integer.parseInt(dateStr.replace("-", ""));
+            java.time.LocalDate localDate = java.time.LocalDate.parse(dateStr);
+            dayOfWeek = localDate.getDayOfWeek().getValue() - 1; // 0=Lundi, 6=Dimanche
+        } catch (Exception e) {
+            return true; // En cas de date invalide, on garde tout par défaut
+        }
+        
+        List<String> sIds = routeToServices.get(routeId);
+        if (sIds == null || sIds.isEmpty()) return true; // Si on a pas les données de service pour cette route, on l'autorise par défaut
+        
+        for (String sId : sIds) {
+            boolean active = false;
+            
+            // On vérifie le calendrier normal
+            ServiceCalendar sc = services.get(sId);
+            if (sc != null && dateInt >= sc.startDate && dateInt <= sc.endDate) {
+                if (sc.days[dayOfWeek]) {
+                    active = true;
+                }
+            }
+            
+            // On vérifie les exceptions (jours fériés / travaux)
+            Map<Integer, Integer> exceptions = calendarDates.get(sId);
+            if (exceptions != null && exceptions.containsKey(dateInt)) {
+                int type = exceptions.get(dateInt);
+                if (type == 1) active = true;   // Exceptionnellement ouvert
+                if (type == 2) active = false;  // Exceptionnellement fermé
+            }
+            
+            // Si au moins un service de cette route roule ce jour-là, la ligne est considérée comme active
+            if (active) return true; 
+        }
+        
+        return false;
     }
 
     public Map<String, Object> verifierConnexite() {

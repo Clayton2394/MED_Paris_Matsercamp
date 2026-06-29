@@ -23,11 +23,11 @@ public class RoutageService {
         this.networkGraphService = networkGraphService;
     }
 
-    public ItineraireResultat calculerItineraire(String nomDepart, String nomArrivee) {
-        Graph<Station, Liaison> graph = networkGraphService.getNetworkGraph();
+    public ItineraireResultat calculerItineraire(String nomDepart, String nomArrivee, String dateYYYYMMDD) {
+        Graph<Station, Liaison> baseGraph = networkGraphService.getNetworkGraph();
 
-        Station stationDepart = trouverStation(graph, nomDepart);
-        Station stationArrivee = trouverStation(graph, nomArrivee);
+        Station stationDepart = trouverStation(baseGraph, nomDepart);
+        Station stationArrivee = trouverStation(baseGraph, nomArrivee);
 
         if (stationDepart == null) {
             throw new IllegalArgumentException("Station de départ inconnue : " + nomDepart);
@@ -41,7 +41,21 @@ public class RoutageService {
         runtime.gc();
         long startMemory = runtime.totalMemory() - runtime.freeMemory();
 
-        DijkstraShortestPath<Station, Liaison> dijkstra = new DijkstraShortestPath<>(graph);
+        // Créer un sous-graphe temporaire avec seulement les lignes actives pour cette date
+        Graph<Station, Liaison> filteredGraph = new org.jgrapht.graph.SimpleWeightedGraph<>(Liaison.class);
+        for (Station s : baseGraph.vertexSet()) {
+            filteredGraph.addVertex(s);
+        }
+        for (Liaison l : baseGraph.edgeSet()) {
+            if (networkGraphService.isRouteActive(l.getRouteId(), dateYYYYMMDD)) {
+                Station source = baseGraph.getEdgeSource(l);
+                Station target = baseGraph.getEdgeTarget(l);
+                filteredGraph.addEdge(source, target, l);
+                filteredGraph.setEdgeWeight(l, baseGraph.getEdgeWeight(l));
+            }
+        }
+
+        DijkstraShortestPath<Station, Liaison> dijkstra = new DijkstraShortestPath<>(filteredGraph);
         GraphPath<Station, Liaison> path = dijkstra.getPath(stationDepart, stationArrivee);
 
         long endTime = System.currentTimeMillis();
