@@ -26,8 +26,8 @@ public class NetworkGraphService {
     private final Map<String, Station> stationIndex = new HashMap<>();
 
     // Les nouveaux chemins vers les fichiers
-    private final String STOPS_FILE = "../Data_clean/stops_clean.txt";
-    private final String LIAISONS_FILE = "../Data_clean/liaisons_clean.txt";
+    private final String STOPS_FILE = "./Data_clean/stops_clean.txt";
+    private final String LIAISONS_FILE = "./Data_clean/liaisons_clean.txt";
 
     @PostConstruct
 public void initGraph() {
@@ -39,11 +39,11 @@ public void initGraph() {
 
     // Si les fichiers CSV sont absents, on injecte un mini-graphe de test
     if (networkGraph.vertexSet().isEmpty()) {
-        System.out.println("Fichiers CSV introuvables — chargement du graphe de test (10 stations).");
+        System.out.println("Fichiers introuvables — chargement du graphe de test (10 stations).");
         chargerGrapheDeTest();
     }
 
-    System.out.println("Graphe terminé ! Nœuds: " + networkGraph.vertexSet().size() + " | Arêtes: " + networkGraph.edgeSet().size());
+    System.out.println("Graphe terminé ! Noeuds: " + networkGraph.vertexSet().size() + " | Arêtes: " + networkGraph.edgeSet().size());
 }
 
 private void chargerGrapheDeTest() {

@@ -40,7 +40,9 @@ public class ApiController {
         for (Station s : graphService.getNetworkGraph().vertexSet()) {
             if (!nomsVus.contains(s.getNom())) {
                 nomsVus.add(s.getNom());
-                listeEpurée.add(new StationDTO(s.getId(), s.getNom()));
+                
+                // On passe maintenant l'ID, le nom, la longitude et la latitude au DTO
+                listeEpurée.add(new StationDTO(s.getId(), s.getNom(), s.getLon(), s.getLat()));
             }
         }
 
