@@ -8,7 +8,7 @@ echo.
 
 echo [1/2] Demarrage du serveur Backend (Java Spring Boot)...
 cd backend-api
-start "Backend (Spring Boot)" cmd /k "mvn spring-boot:run"
+start "Backend (Spring Boot)" cmd /k "mvnw.cmd spring-boot:run"
 cd ..
 
 :: Petite temporisation pour laisser le backend demarrer avant le frontend

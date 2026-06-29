@@ -74,9 +74,30 @@
 
       <div v-if="store.resultatItineraire" class="resultats">
         <h3>Trajet trouvé :</h3>
-        <ul>
+
+        <div v-if="horairesTrajet" class="resume-trajet">
+          <strong>Départ :</strong> {{ horairesTrajet.depart }} <br/>
+          <strong>Arrivée :</strong> {{ horairesTrajet.arrivee }} <br/>
+          <strong>Durée :</strong> {{ horairesTrajet.duree }} min
+        </div>
+
+        <ul class="liste-stations">
           <li v-for="(station, index) in store.resultatItineraire.chemin" :key="index">
-            📍 {{ station.nom }}
+            <div class="station-ligne-info" v-if="index > 0 && station.ligne && station.ligne !== store.resultatItineraire.chemin[index-1].ligne">
+              <span v-if="station.ligne === 'Correspondance'" class="badge badge-correspondance">
+                🚶 Correspondance ({{ Math.round(station.dureeDepuisPrecedent / 60) }} min)
+              </span>
+              <span v-else class="badge badge-ligne" :style="{ backgroundColor: getCouleurLigne(station.ligne, station.couleur) }">
+                {{ station.ligne.includes(' ') ? station.ligne : 'Ligne ' + station.ligne }}
+              </span>
+            </div>
+            
+            <div class="station-nom">
+              <span v-if="index === 0 && store.resultatItineraire.chemin.length > 1 && store.resultatItineraire.chemin[1].ligne && store.resultatItineraire.chemin[1].ligne !== 'Correspondance'" class="badge badge-ligne" :style="{ backgroundColor: getCouleurLigne(store.resultatItineraire.chemin[1].ligne, store.resultatItineraire.chemin[1].couleur) }">
+                Ligne {{ store.resultatItineraire.chemin[1].ligne }}
+              </span>
+              📍 {{ station.nom }}
+            </div>
           </li>
         </ul>
 
@@ -106,6 +127,40 @@ const store = useTransportStore()
 const mapContainer = ref(null)
 let mapInstance = null
 
+// Dictionnaire des couleurs de lignes (demandé par l'utilisateur)
+const COULEURS_LIGNES = {
+  '1': '#FFCE00',
+  '2': '#0064B0',
+  '3': '#9F9825',
+  '3bis': '#98D4E2',
+  '4': '#C04191',
+  '5': '#F28E42',
+  '6': '#83C491',
+  '7': '#F3A4BA',
+  '7bis': '#83C491',
+  '8': '#CEADD2',
+  '9': '#D5C900',
+  '10': '#E3B32A',
+  '11': '#8D5E2A',
+  '12': '#00814F',
+  '13': '#98D4E2',
+  '14': '#662483',
+  '15': '#B90845',
+  '16': '#F3A4BA',
+  '17': '#D5C900',
+  '18': '#00A88F',
+  'Correspondance': '#808080'
+};
+
+const getCouleurLigne = (ligne, couleurBackend) => {
+  if (!ligne) return '#000000';
+  if (ligne === 'Correspondance') return '#808080';
+  const numLigne = ligne.replace('Ligne ', '').trim();
+  if (COULEURS_LIGNES[numLigne]) return COULEURS_LIGNES[numLigne];
+  if (couleurBackend) return '#' + couleurBackend;
+  return '#1a73e8';
+};
+
 // Calcul de l'impact carbone
 const impactCarbone = computed(() => {
   if (!store.resultatItineraire || !store.resultatItineraire.chemin) return { distance: 0, co2Evite: 0 };
@@ -123,6 +178,36 @@ const impactCarbone = computed(() => {
     distance: distanceTotal.toFixed(1),
     co2Evite: co2EviteKg.toFixed(2)
   };
+});
+
+// Calcul des horaires de trajet
+const horairesTrajet = computed(() => {
+  if (!store.resultatItineraire || !store.heureTrajet) return null;
+  const dureeSec = store.resultatItineraire.dureeTotaleSecondes || 0;
+  const dureeMin = Math.round(dureeSec / 60);
+  
+  const [h, m] = store.heureTrajet.split(':').map(Number);
+  const dateBase = new Date(store.dateTrajet || new Date());
+  dateBase.setHours(h || 0, m || 0, 0);
+
+  const dateArrivee = new Date(dateBase.getTime() + dureeSec * 1000);
+  
+  const formatter = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  
+  if (store.typeRecherche === 'arrivee') {
+    const dateDepart = new Date(dateBase.getTime() - dureeSec * 1000);
+    return {
+      depart: formatter.format(dateDepart),
+      arrivee: formatter.format(dateBase),
+      duree: dureeMin
+    };
+  } else {
+    return {
+      depart: formatter.format(dateBase),
+      arrivee: formatter.format(dateArrivee),
+      duree: dureeMin
+    };
+  }
 });
 
 // Variables pour l'autocomplétion personnalisée
@@ -182,25 +267,40 @@ watch(() => store.resultatItineraire, (nouveauResultat) => {
   if (!mapInstance) return;
 
   if (nouveauResultat && nouveauResultat.chemin) {
-    // Récupération des véritables coordonnées [longitude, latitude]
-    const coordonneesReelles = nouveauResultat.chemin.map(etape => [etape.longitude, etape.latitude]);
+    const chemin = nouveauResultat.chemin;
+    const coordonneesReelles = chemin.map(etape => [etape.longitude, etape.latitude]);
+
+    const features = [];
+    for (let i = 0; i < chemin.length - 1; i++) {
+      const stationA = chemin[i];
+      const stationB = chemin[i + 1];
+      const ligneNom = stationB.ligne || 'Correspondance';
+      const segmentColor = getCouleurLigne(ligneNom, stationB.couleur);
+
+      features.push({
+        type: 'Feature',
+        properties: { color: segmentColor },
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [stationA.longitude, stationA.latitude],
+            [stationB.longitude, stationB.latitude]
+          ]
+        }
+      });
+    }
+
+    const geojsonData = {
+      type: 'FeatureCollection',
+      features: features
+    };
 
     if (mapInstance.getSource('tracet-itineraire')) {
-      // Mise à jour de la ligne si elle existe déjà
-      mapInstance.getSource('tracet-itineraire').setData({
-        type: 'Feature',
-        properties: {},
-        geometry: { type: 'LineString', coordinates: coordonneesReelles }
-      });
+      mapInstance.getSource('tracet-itineraire').setData(geojsonData);
     } else {
-      // Création de la ligne bleue si elle n'existe pas encore
       mapInstance.addSource('tracet-itineraire', {
         type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: { type: 'LineString', coordinates: coordonneesReelles }
-        }
+        data: geojsonData
       });
 
       mapInstance.addLayer({
@@ -208,7 +308,7 @@ watch(() => store.resultatItineraire, (nouveauResultat) => {
         type: 'line',
         source: 'tracet-itineraire',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#1a73e8', 'line-width': 5 }
+        paint: { 'line-color': ['get', 'color'], 'line-width': 5 }
       });
     }
 
@@ -414,6 +514,52 @@ ul {
 li {
   padding: 5px 0;
   font-size: 0.95rem;
+}
+
+/* Nouveaux styles pour les horaires et badges */
+.resume-trajet {
+  background-color: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border-left: 4px solid #1a73e8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.liste-stations {
+  padding-left: 0;
+}
+
+.station-ligne-info {
+  margin: 8px 0;
+  padding-left: 20px;
+  border-left: 2px dashed #ccc;
+  margin-left: 10px;
+}
+
+.station-nom {
+  display: flex;
+  align-items: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+.badge-correspondance {
+  background-color: #808080;
+}
+
+.badge-ligne {
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
 /* Animation de chargement */

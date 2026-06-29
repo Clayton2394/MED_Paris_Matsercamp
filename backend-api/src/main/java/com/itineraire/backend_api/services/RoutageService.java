@@ -55,11 +55,29 @@ public class RoutageService {
         }
 
         List<StationDTO> chemin = new ArrayList<>();
-        String dernierNom = null;
-        for (Station s : path.getVertexList()) {
-            if (!s.getNom().equals(dernierNom)) {
-                chemin.add(new StationDTO(s.getNom(), s.getLat(), s.getLon()));
-                dernierNom = s.getNom();
+        List<Station> stations = path.getVertexList();
+        List<Liaison> edges = path.getEdgeList();
+        
+        // Ajouter la station de départ
+        Station depart = stations.get(0);
+        chemin.add(new StationDTO(depart.getNom(), depart.getLat(), depart.getLon()));
+
+        String dernierNom = depart.getNom();
+        
+        for (int i = 0; i < edges.size(); i++) {
+            Liaison edge = edges.get(i);
+            Station arriveeEdge = stations.get(i + 1);
+            
+            // On ajoute si le nom de station change, ou si c'est la même station 
+            // mais on veut montrer un changement (optionnel). 
+            // On va ajouter toutes les étapes utiles.
+            if (!arriveeEdge.getNom().equals(dernierNom) || "Correspondance".equals(edge.getLigneNom())) {
+                StationDTO dto = new StationDTO(arriveeEdge.getNom(), arriveeEdge.getLat(), arriveeEdge.getLon());
+                dto.setLigne(edge.getLigneNom());
+                dto.setCouleur(edge.getCouleur());
+                dto.setDureeDepuisPrecedent(edge.getPoids());
+                chemin.add(dto);
+                dernierNom = arriveeEdge.getNom();
             }
         }
 
