@@ -120,6 +120,19 @@ public class ConnectivityService {
         return composantes;
     }
 
+    public List<String> stationsIsolees() {
+        Graph<Station, Liaison> graph = networkGraphService.getNetworkGraph();
+        List<String> isolees = new ArrayList<>();
+
+        for (Station station : graph.vertexSet()) {
+            if (graph.degreeOf(station) == 0) {
+                isolees.add(station.getNom());
+            }
+        }
+
+        return isolees;
+    }
+
     private String normaliser(String texte) {
         if (texte == null) return "";
         return Normalizer.normalize(texte, Normalizer.Form.NFD)
