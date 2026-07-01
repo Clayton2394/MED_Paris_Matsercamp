@@ -19,6 +19,7 @@ import com.itineraire.backend_api.models.Station;
 import com.itineraire.backend_api.services.NetworkGraphService;
 import com.itineraire.backend_api.services.RoutageService;
 import com.itineraire.backend_api.services.AcpmService;
+import com.itineraire.backend_api.services.ConnectivityService;
 
 
 @RestController
@@ -29,11 +30,13 @@ public class ApiController {
     private final NetworkGraphService graphService;
     private final RoutageService routageService;
     private final AcpmService acpmService;
+    private final ConnectivityService connectivityService;
 
-    public ApiController(NetworkGraphService graphService, RoutageService routageService, AcpmService acpmService) {
+    public ApiController(NetworkGraphService graphService, RoutageService routageService, AcpmService acpmService, ConnectivityService connectivityService) {
         this.graphService = graphService;
         this.routageService = routageService;
         this.acpmService = acpmService;
+        this.connectivityService = connectivityService;
     }
 
     @GetMapping("/stations")
@@ -68,5 +71,25 @@ public class ApiController {
     @GetMapping("/connexite")
     public ResponseEntity<java.util.Map<String, Object>> getConnexite() {
         return ResponseEntity.ok(graphService.verifierConnexite());
+    }
+
+    @GetMapping("/bfs")
+    public ResponseEntity<?> getBfs(@RequestParam String depart) {
+        try {
+            List<String> ordreVisite = connectivityService.bfs(depart);
+            return ResponseEntity.ok(ordreVisite);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/dfs")
+    public ResponseEntity<?> getDfs(@RequestParam String depart) {
+        try {
+            List<String> ordreVisite = connectivityService.dfs(depart);
+            return ResponseEntity.ok(ordreVisite);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
     }
 }
