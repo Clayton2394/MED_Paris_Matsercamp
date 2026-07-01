@@ -54,6 +54,38 @@ public class ConnectivityService {
         return ordreVisite;
     }
 
+    public List<String> dfs(String stationId) {
+        Graph<Station, Liaison> graph = networkGraphService.getNetworkGraph();
+        Station depart = trouverStation(graph, stationId);
+        if (depart == null) {
+            throw new IllegalArgumentException("Station inconnue : " + stationId);
+        }
+
+        List<String> ordreVisite = new ArrayList<>();
+        Set<Station> visitees = new HashSet<>();
+        Deque<Station> pile = new ArrayDeque<>();
+
+        pile.push(depart);
+
+        while (!pile.isEmpty()) {
+            Station courante = pile.pop();
+            if (visitees.contains(courante)) {
+                continue;
+            }
+            visitees.add(courante);
+            ordreVisite.add(courante.getNom());
+
+            for (Liaison liaison : graph.edgesOf(courante)) {
+                Station voisine = Graphs.getOppositeVertex(graph, liaison, courante);
+                if (!visitees.contains(voisine)) {
+                    pile.push(voisine);
+                }
+            }
+        }
+
+        return ordreVisite;
+    }
+
     private String normaliser(String texte) {
         if (texte == null) return "";
         return Normalizer.normalize(texte, Normalizer.Form.NFD)
