@@ -86,6 +86,40 @@ public class ConnectivityService {
         return ordreVisite;
     }
 
+    public List<List<String>> composantesConnexes() {
+        Graph<Station, Liaison> graph = networkGraphService.getNetworkGraph();
+        Set<Station> visitees = new HashSet<>();
+        List<List<String>> composantes = new ArrayList<>();
+
+        for (Station depart : graph.vertexSet()) {
+            if (visitees.contains(depart)) {
+                continue;
+            }
+
+            List<String> composante = new ArrayList<>();
+            Deque<Station> file = new ArrayDeque<>();
+            file.add(depart);
+            visitees.add(depart);
+
+            while (!file.isEmpty()) {
+                Station courante = file.poll();
+                composante.add(courante.getNom());
+
+                for (Liaison liaison : graph.edgesOf(courante)) {
+                    Station voisine = Graphs.getOppositeVertex(graph, liaison, courante);
+                    if (!visitees.contains(voisine)) {
+                        visitees.add(voisine);
+                        file.add(voisine);
+                    }
+                }
+            }
+
+            composantes.add(composante);
+        }
+
+        return composantes;
+    }
+
     private String normaliser(String texte) {
         if (texte == null) return "";
         return Normalizer.normalize(texte, Normalizer.Form.NFD)
